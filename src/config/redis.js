@@ -10,7 +10,7 @@ if (env.redisHost && env.redisPassword) {
     port: env.redisPort,
     password: env.redisPassword,
     tls: {}, // 🔥 REQUIRED for Azure Redis (SSL)
-    
+
     maxRetriesPerRequest: 3,
     retryDelayOnFailover: 100,
     enableReadyCheck: true,
@@ -67,7 +67,7 @@ async function validateRedisConnection() {
 
     // Try to connect with timeout
     const connectPromise = redisClient.connect();
-    const timeoutPromise = new Promise((_, reject) => 
+    const timeoutPromise = new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Connection timeout')), 5000)
     );
 
@@ -96,7 +96,7 @@ function getRedisStatus() {
   if (!redisClient) {
     return { connected: false, status: 'not_initialized', error: 'Redis client not initialized' };
   }
-  
+
   return {
     connected: redisClient.status === 'ready',
     status: redisClient.status,

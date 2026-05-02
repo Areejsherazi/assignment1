@@ -8,7 +8,7 @@ const { validateRedisConnection } = require('./config/redis');
 async function startServer() {
   try {
     console.log('🚀 Starting application...');
-    
+
     // Connect to database first
     console.log('📦 Connecting to database...');
     await connectDatabase();
@@ -17,7 +17,7 @@ async function startServer() {
     // Validate Redis connection
     console.log('🔴 Validating Redis connection...');
     const redisConnected = await validateRedisConnection();
-    
+
     if (!redisConnected) {
       console.warn('⚠️ Redis is not connected - application will run without caching');
       console.warn('   To enable Redis, add these to your .env file:');

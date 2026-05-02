@@ -40,7 +40,7 @@ const { getRedisStatus } = require('./config/redis');
 
 app.get('/health', (req, res) => {
   const redisStatus = getRedisStatus();
-  
+
   const health = {
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -55,7 +55,7 @@ app.get('/health', (req, res) => {
 
   // If Redis is not connected, still return 200 but indicate degraded status
   const statusCode = redisStatus.connected ? 200 : 200; // Keep 200 but show degraded state
-  
+
   res.status(statusCode).json(health);
 });
 
