@@ -9,6 +9,9 @@ async function startServer() {
   try {
     console.log('🚀 Starting application...');
 
+    app.listen(env.port, () => {
+      console.log(`🌐 Server running on port ${env.port}`);
+    });
     // Connect to database first
     console.log('📦 Connecting to database...');
     await connectDatabase();
@@ -30,11 +33,7 @@ async function startServer() {
     }
 
     // Start the server
-    app.listen(env.port, () => {
-      console.log(`🌐 Server running on port ${env.port}`);
-      console.log(`📚 API Documentation: http://localhost:${env.port}/api-docs`);
-      console.log(`🏥 Health Check: http://localhost:${env.port}/health`);
-    });
+
   } catch (error) {
     console.error('❌ Startup failed:', error.message);
     process.exit(1);
