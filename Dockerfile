@@ -8,8 +8,8 @@ RUN npm install --omit=dev
 
 COPY . .
 
-RUN addgroup -g 1000 -S nodejs && \
-    adduser -S nextjs -u 1000
+# Create app user (nodejs group already exists in node:alpine)
+RUN adduser -S nextjs -u 1000
 
 RUN chown -R nextjs:nodejs /app
 USER nextjs
