@@ -1,86 +1,143 @@
-# This workflow will build and push a Docker container to an Azure Web App when a commit is pushed to your default branch.
-#
-# This workflow assumes you have already created the target Azure App Service web app.
-# For instructions see https://docs.microsoft.com/en-us/azure/app-service/quickstart-custom-container?tabs=dotnet&pivots=container-linux
-#
-# To configure this workflow:
-#
-# 1. Download the Publish Profile for your Azure Web App. You can download this file from the Overview page of your Web App in the Azure Portal.
-#    For more information: https://docs.microsoft.com/en-us/azure/app-service/deploy-github-actions?tabs=applevel#generate-deployment-credentials
-#
-# 2. Create a secret in your repository named AZURE_WEBAPP_PUBLISH_PROFILE, paste the publish profile contents as the value of the secret.
-#    For instructions on obtaining the publish profile see: https://docs.microsoft.com/azure/app-service/deploy-github-actions#configure-the-github-secret
-#
-# 3. Create a GitHub Personal access token with "repo" and "read:packages" permissions.
-#
-# 4. Create three app settings on your Azure Web app:
-#       DOCKER_REGISTRY_SERVER_URL: Set this to "https://ghcr.io"
-#       DOCKER_REGISTRY_SERVER_USERNAME: Set this to the GitHub username or organization that owns the repository
-#       DOCKER_REGISTRY_SERVER_PASSWORD: Set this to the value of your PAT token from the previous step
-#
-# 5. Change the value for the AZURE_WEBAPP_NAME.
-#
-# For more information on GitHub Actions for Azure: https://github.com/Azure/Actions
-# For more information on the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# For more samples to get started with GitHub Action workflows to deploy to Azure: https://github.com/Azure/actions-workflow-samples
-
-name: Build and deploy a container to an Azure Web App
-
-env:
-  AZURE_WEBAPP_NAME: your-app-name  # set this to the name of your Azure Web App
+name: Deploy to Azure Container Web App
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Debug - Show workspace contents
+        run: |
+          echo "📁 Current workspace contents:"
+          ls -la
+          echo ""
+          echo "🐳 Dockerfile contents:"
+          cat Dockerfile
+          echo ""
+          echo "📦 Package.json contents:"
+          cat package.json
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226 # v3.0.0
+        uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub container registry
-        uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      - name: Debug - Docker Buildx info
+        run: |
+          echo "🔧 Docker Buildx info:"
+          docker buildx version
+          docker buildx ls
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Lowercase the repo name and username
-        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Debug - Verify Docker login
+        run: |
+          echo "🔐 Docker login verification:"
+          docker info | grep Username
 
-      - name: Build and push container image to registry
-        uses: docker/build-push-action@0565240e2d4ab88bba5387d719585280857ece09 # v5.0.0
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
         with:
-          push: true
-          tags: ghcr.io/${{ env.REPO }}:${{ github.sha }}
+          context: .
           file: ./Dockerfile
+          push: true
+          tags: moizbukhari/media-share:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-  deploy:
-    permissions:
-      contents: none
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: 'Development'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+      - name: Debug - Verify Docker image
+        run: |
+          echo "🐳 Verifying Docker image:"
+          docker pull moizbukhari/media-share:latest
+          docker images moizbukhari/media-share
 
-    steps:
-      - name: Lowercase the repo name and username
-        run: echo "REPO=${GITHUB_REPOSITORY,,}" >>${GITHUB_ENV}
+      - name: Debug - Check Azure credentials
+        run: |
+          echo "🔑 Checking Azure credentials..."
+          if [ -n "${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" ]; then
+            echo "✅ AZURE_WEBAPP_PUBLISH_PROFILE is set"
+          else
+            echo "❌ AZURE_WEBAPP_PUBLISH_PROFILE is missing"
+          fi
+          if [ -n "${{ secrets.AZURE_RESOURCE_GROUP }}" ]; then
+            echo "✅ AZURE_RESOURCE_GROUP is set"
+          else
+            echo "❌ AZURE_RESOURCE_GROUP is missing"
+          fi
 
       - name: Deploy to Azure Web App
-        id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: ${{ env.AZURE_WEBAPP_NAME }}
+          app-name: sharing
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          images: 'ghcr.io/${{ env.REPO }}:${{ github.sha }}'
+          images: moizbukhari/media-share:latest
+
+      - name: Debug - Verify deployment
+        run: |
+          echo "🚀 Checking deployment status..."
+          echo "Web App: sharing"
+          echo "Resource Group: ${{ secrets.AZURE_RESOURCE_GROUP }}"
+
+      - name: Configure App Settings
+        run: |
+          echo "⚙️ Configuring app settings..."
+          
+          # Check if secrets are available
+          echo "🔍 Checking environment secrets:"
+          echo "MONGODB_URI: ${{ secrets.MONGODB_URI != '' && 'SET' || 'MISSING' }}"
+          echo "JWT_SECRET: ${{ secrets.JWT_SECRET != '' && 'SET' || 'MISSING' }}"
+          echo "CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME != '' && 'SET' || 'MISSING' }}"
+          echo "CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY != '' && 'SET' || 'MISSING' }}"
+          echo "CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET != '' && 'SET' || 'MISSING' }}"
+          echo "REDIS_HOST: ${{ secrets.REDIS_HOST != '' && 'SET' || 'MISSING' }}"
+          
+          az webapp config appsettings set \
+            --name sharing \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --settings \
+            MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+            JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            JWT_EXPIRES_IN="${{ secrets.JWT_EXPIRES_IN || '7d' }}" \
+            CLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
+            CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
+            CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
+            CLOUDINARY_FOLDER="${{ secrets.CLOUDINARY_FOLDER || 'photo-sharing' }}" \
+            REDIS_HOST="${{ secrets.REDIS_HOST }}" \
+            REDIS_PORT="${{ secrets.REDIS_PORT || '6379' }}" \
+            REDIS_PASSWORD="${{ secrets.REDIS_PASSWORD }}" \
+            PORT=3000 \
+            NODE_ENV=production
+
+      - name: Debug - Verify app settings
+        run: |
+          echo "🔍 Verifying app settings..."
+          az webapp config appsettings list \
+            --name sharing \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --output table
+
+      - name: Restart Web App
+        run: |
+          echo "🔄 Restarting web app..."
+          az webapp restart \
+            --name sharing \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }}
+
+      - name: Debug - Check web app status
+        run: |
+          echo "📊 Checking web app status..."
+          az webapp show \
+            --name sharing \
+            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+            --query "{state: state, hostName: defaultHostName, enabled: enabled}" \
+            --output table
