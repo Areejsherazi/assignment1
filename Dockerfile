@@ -9,6 +9,6 @@ COPY . .
 
 USER node 
 
-EXPOSE 8000
+EXPOSE 8080
 
 CMD ["node", "src/server.js"]
