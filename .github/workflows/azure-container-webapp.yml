@@ -9,11 +9,11 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Debug - Show workspace contents
         run: |
           echo "📁 Current workspace contents:"
@@ -43,7 +43,7 @@ jobs:
       - name: Debug - Verify Docker login
         run: |
           echo "🔐 Docker login verification:"
-          docker info | grep Username
+          docker info | grep Username || true
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -61,18 +61,24 @@ jobs:
           docker pull moizbukhari/media-share:latest
           docker images moizbukhari/media-share
 
+      # ✅ SAFE CHECK (no bash XML parsing issue)
       - name: Debug - Check Azure credentials
+        env:
+          AZURE_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          AZURE_RG: ${{ secrets.AZURE_RESOURCE_GROUP }}
         run: |
           echo "🔑 Checking Azure credentials..."
-          if [ -n "${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}" ]; then
-            echo "✅ AZURE_WEBAPP_PUBLISH_PROFILE is set"
-          else
+
+          if [ -z "$AZURE_PUBLISH_PROFILE" ]; then
             echo "❌ AZURE_WEBAPP_PUBLISH_PROFILE is missing"
-          fi
-          if [ -n "${{ secrets.AZURE_RESOURCE_GROUP }}" ]; then
-            echo "✅ AZURE_RESOURCE_GROUP is set"
           else
+            echo "✅ AZURE_WEBAPP_PUBLISH_PROFILE is set"
+          fi
+
+          if [ -z "$AZURE_RG" ]; then
             echo "❌ AZURE_RESOURCE_GROUP is missing"
+          else
+            echo "✅ AZURE_RESOURCE_GROUP is set"
           fi
 
       - name: Deploy to Azure Web App
@@ -91,8 +97,7 @@ jobs:
       - name: Configure App Settings
         run: |
           echo "⚙️ Configuring app settings..."
-          
-          # Check if secrets are available
+
           echo "🔍 Checking environment secrets:"
           echo "MONGODB_URI: ${{ secrets.MONGODB_URI != '' && 'SET' || 'MISSING' }}"
           echo "JWT_SECRET: ${{ secrets.JWT_SECRET != '' && 'SET' || 'MISSING' }}"
@@ -100,7 +105,7 @@ jobs:
           echo "CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY != '' && 'SET' || 'MISSING' }}"
           echo "CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET != '' && 'SET' || 'MISSING' }}"
           echo "REDIS_HOST: ${{ secrets.REDIS_HOST != '' && 'SET' || 'MISSING' }}"
-          
+
           az webapp config appsettings set \
             --name sharing \
             --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
