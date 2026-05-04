@@ -18,6 +18,11 @@ const commentSchema = new mongoose.Schema(
       required: true,
       trim: true,
       maxlength: 300
+    },
+    userName: {
+      type: String,
+      required: true,
+      trim: true
     }
   },
   {

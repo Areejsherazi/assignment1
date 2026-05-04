@@ -18,7 +18,7 @@ async function startServer() {
     console.log('✅ Database connected successfully');
 
     // Validate Redis connection
-    console.log('🔴 Validating Redis connection...');
+    console.log(' Validating Redis connection...');
     const redisConnected = await validateRedisConnection();
 
     if (!redisConnected) {
@@ -31,9 +31,7 @@ async function startServer() {
     } else {
       console.log('✅ Redis connection validated');
     }
-
     // Start the server
-
   } catch (error) {
     console.error('❌ Startup failed:', error.message);
     process.exit(1);

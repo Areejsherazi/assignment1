@@ -373,6 +373,7 @@ async function addComment(req, res, next) {
     const comment = await Comment.create({
       imageId: id,
       userId: req.user._id,
+      userName: req.user.username,
       text: req.body.text
     });
 
